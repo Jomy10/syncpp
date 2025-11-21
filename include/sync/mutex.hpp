@@ -1,5 +1,9 @@
 #pragma once
 
+#if __cplusplus >= 201112L
+
+#include <sync/_internal/guard.hpp>
+
 #include <mutex>
 #if __cplusplus >= 201703L
 #include <optional>
@@ -23,27 +27,7 @@ class MutexGuard {
       m(m) {}
 
   public:
-  operator T&() {
-    return this->val;
-  }
-
-  T& operator*() {
-    return this->val;
-  }
-  const T& operator*() const {
-    return this->val;
-  }
-
-  T* operator->() {
-    return &this->val;
-  }
-  const T* operator->() const {
-    return &this->val;
-  }
-
-  T& value() {
-    return this->val;
-  }
+  GUARD_FNS
 
   ~MutexGuard() {
     m.unlock();
@@ -76,3 +60,5 @@ class Mutex {
 };
 
 } // namespace
+
+#endif // c++ 11 version check

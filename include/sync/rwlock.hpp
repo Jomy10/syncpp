@@ -14,7 +14,8 @@
 #elif defined(SYNC_RWLOCK_IS_PTHREAD)
   #include <pthread.h>
 #else
-
+  #error "unimplemented"
+  // for example windows-specific: https://github.com/mqudsi/RWLock/blob/master/RWLock/RWLock.h
 #endif
 
 namespace sync {

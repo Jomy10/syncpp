@@ -1,6 +1,6 @@
 require "net/http"
 
-Project(name: "sync++")
+Project(name: "syncpp")
 
 cpp_version = opt("cpp-version", default: 23)
 

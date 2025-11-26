@@ -180,6 +180,44 @@ go_bandit([]() {
   });
 });
 
+static std::string mutex_impl =
+#if defined(SYNC_MUTEX_IS_PTHREAD)
+"pthread";
+#else
+"std::mutex";
+#endif
+
+static std::string rwlock_impl =
+#if defined(SYNC_RWLOCK_IS_SHARED_MUTEX)
+"std::shared_mutex";
+#elif defined(SYNC_RWLOCK_IS_PTHREAD)
+"pthread";
+#else
+"unimplemented";
+#endif
+
+static std::string once_impl =
+#if defined(SYNC_HAVE_MUTEX) && defined(SYNC_HAVE_OPTIONAL)
+"std::once_flag & std::call_once";
+#else
+"none";
+#endif
+
+static std::string lazy_impl =
+#if defined(SYNC_HAVE_MUTEX) && defined(SYNC_HAVE_OPTIONAL)
+"Once";
+#else
+"none";
+#endif
+
 int main(int argc, char* argv[]) {
+  std::cout << "Implementations" << std::endl
+            << "===============" << std::endl
+            << "Mutex: " << mutex_impl << std::endl
+            << "RwLock: " << rwlock_impl << std::endl
+            << "Once: " << once_impl << std::endl
+            << "Lazy: " << lazy_impl << std::endl
+            << std::endl;
+
   return bandit::run(argc, argv);
 }

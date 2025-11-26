@@ -109,3 +109,11 @@ beaver test
 | RwLock | `pthread_rwlock_t` | N/A | posix | Target OS is posix | `rwlock-is-pthread` |
 | Once | `std::once_flag` and `std::call_once` | C++ 17 | any | YES | None |
 | Lazy | `Once` | C++ 17 | any | YES | None |
+
+## Notes
+
+In the Rust's std::sync, there are some types which will not be implemented in this library
+as there are already alternatives in the standard library.
+
+- `Once`: `std::call_once`
+- `Arc`: `std::atomic<std::shared_ptr>`

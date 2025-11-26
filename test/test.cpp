@@ -3,6 +3,7 @@
 #include <sync/mutex.hpp>
 #include <sync/rwlock.hpp>
 #include <sync/once.hpp>
+#include <sync/lazy.hpp>
 
 #include <thread>
 
@@ -158,13 +159,23 @@ go_bandit([]() {
 
       AssertThat(o.get(), Is().EqualTo(std::nullopt));
 
-      auto v = o.get_or_init(fn, 100);
-      AssertThat(v.has_value(), Is().EqualTo(true));
-      AssertThat(v.value(), Is().EqualTo(100));
+      AssertThat(o.get_or_init(fn, 100), Is().EqualTo(100));
 
-      auto v2 = o.get_or_init(fn, 10);
-      AssertThat(v2.has_value(), Is().EqualTo(true));
-      AssertThat(v2.value(), Is().EqualTo(100));
+      AssertThat(o.get_or_init(fn, 10), Is().EqualTo(100));
+    });
+  });
+
+  describe("lazy", []() {
+    it("works", []() {
+      std::function<int(void)> fn = []() {
+        return 10;
+      };
+
+      sync::Lazy<int> l([]() {
+        return 10;
+      });
+
+      AssertThat(l.get(), Is().EqualTo(10));
     });
   });
 });

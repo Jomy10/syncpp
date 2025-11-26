@@ -46,8 +46,6 @@ auto wrguard = m.write(); // error
 Initializes a variable exectly once in a thread-safe manner.
 
 ```c++
-sync::Once<int> o();
-
 sync::Once<int> o = sync::Once<int>();
 
 o.get(); // std::nullopt
@@ -65,6 +63,15 @@ o.init_once(fn, 10);
 o.get().value(); // 1
 ```
 
+### Lazy
+
+Initialize a variable exactly once with a single initializer.
+
+```c++
+sync::Lazy<int> l = sync::Lazy<int>([]() { return 10 });
+l.get(); // 10
+```
+
 ## Building
 
 This project uses the [beaver build system](https://github.com/Jomy10/beaver).
@@ -79,14 +86,26 @@ Options can be specified after `beaver --`. For example: `beaver -- --no-test --
 
 | Option | Description | default | Min C++ version |
 |--------|-------------|---------|-----------------|
+| `mutex-is-pthread` | Mutex implemented using `pthread_mutex_t` (default: `std::mutex`). | ON if C++ version < 11 and Target OS is posix | N/A |
+| `mutex-extension` | Allow extra functions for Mutex based on the specified implementation (not portable) | off | N/A |
 | `rwlock-is-pthread` | RwLock implemented using `pthread_rwlock_t` | ON if Target OS is posix | N/A |
 | `rwlock-is-shared-mutex` | RwLock implemented using `std::shared_mutex` (currently not fully implemented) | off | 17 |
 | `rwlock-extension` | Allow extra functions for RwLock based on the specified implementation (not portable) | off | N/A |
-| `mutex_is_pthread` | Mutex implemented using `pthread_mutex_t` (default: `std::mutex`). | ON if C++ version < 11 and Target OS is posix | N/A |
-| `mutex-extension` | Allow extra functions for Mutex based on the specified implementation (not portable) | off | N/A |
+| `no-test` | Don't build the test target | off | N/A |
 
 ## Running tests
 
 ```sh
 beaver test
-``
+```
+
+## Feature list
+
+| Feature | Implementation | Min C++ version | OS support | Default | Build option |
+|---------|----------------|-----------------|------------|---------|--------------|
+| Mutex | `std::mutex` | C++ 11 | any | if C++ >= 11 | default |
+| Mutex | `pthread_mutex_t` | N/A | posix | if C++ < 11 and Target OS is posix | `mutex-is-pthread` |
+| RwLock | `std::shared_mutex` | C++ 17 | any | NO (currently not complete) | `rwlock-is-shared-mutex` |
+| RwLock | `pthread_rwlock_t` | N/A | posix | Target OS is posix | `rwlock-is-pthread` |
+| Once | `std::once_flag` and `std::call_once` | C++ 17 | any | YES | None |
+| Lazy | `Once` | C++ 17 | any | YES | None |

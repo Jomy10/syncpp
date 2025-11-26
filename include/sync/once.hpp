@@ -30,13 +30,13 @@ class Once: public internal::NonCopyable {
     return this->value;
   }
 
-  T* operator->() { return &this->get(); }
-  T& operator*() { return this->get(); }
+  std::optional<T>* operator->() { return &this->get(); }
+  std::optional<T>& operator*() { return this->get(); }
 
   template<typename InitFunc, typename ...Args>
-  std::optional<T>& get_or_init(InitFunc&& fn, Args&& ...args) {
+  T& get_or_init(InitFunc&& fn, Args&& ...args) {
     this->init_once(std::forward<InitFunc>(fn), std::forward<Args>(args)...);
-    return this->get();
+    return this->get().value();
   }
 };
 

@@ -2,6 +2,8 @@
 
 #include <sync/mutex.hpp>
 #include <sync/rwlock.hpp>
+#include <sync/once.hpp>
+
 #include <thread>
 
 using namespace snowhouse;
@@ -124,6 +126,28 @@ go_bandit([]() {
       AssertThat(guard->value(), Is().EqualTo(2));
     });
     #endif
+  });
+
+  describe("Once", []() {
+    it("works", []() {
+      sync::Once<int> o = sync::Once<int>();
+
+      AssertThat(o.get(), Is().EqualTo(std::nullopt));
+
+      std::function<int(int)> fn = [](int n) {
+        return n;
+      };
+
+      o.init_once(fn, 1);
+
+      AssertThat(o.get().has_value(), Is().EqualTo(true));
+      AssertThat(o.get().value(), Is().EqualTo(1));
+
+      o.init_once(fn, 10);
+
+      AssertThat(o.get().has_value(), Is().EqualTo(true));
+      AssertThat(o.get().value(), Is().EqualTo(1));
+    });
   });
 });
 

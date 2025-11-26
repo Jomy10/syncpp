@@ -47,7 +47,7 @@ This project uses the [beaver build system](https://github.com/Jomy10/beaver).
 beaver -- --no-test
 ```
 
-### Building options
+### Build options
 
 Options can be specified after `beaver --`. For example: `beaver -- --no-test --rwlock-is-pthread`.
 

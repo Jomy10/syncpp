@@ -9,7 +9,7 @@
 
 namespace sync {
 
-/// low-level synchronization primitive for one-time global execution
+/// Initializes a variable once
 template<class T>
 class Once: public internal::NonCopyable {
   private:
@@ -32,6 +32,12 @@ class Once: public internal::NonCopyable {
 
   T* operator->() { return &this->get(); }
   T& operator*() { return this->get(); }
+
+  template<typename InitFunc, typename ...Args>
+  std::optional<T>& get_or_init(InitFunc&& fn, Args&& ...args) {
+    this->init_once(std::forward<InitFunc>(fn), std::forward<Args>(args)...);
+    return this->get();
+  }
 };
 
 } // namespace

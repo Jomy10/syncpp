@@ -84,3 +84,9 @@ Options can be specified after `beaver --`. For example: `beaver -- --no-test --
 | `rwlock-extension` | Allow extra functions for RwLock based on the specified implementation (not portable) | off | N/A |
 | `mutex_is_pthread` | Mutex implemented using `pthread_mutex_t` (default: `std::mutex`). | ON if C++ version < 11 and Target OS is posix | N/A |
 | `mutex-extension` | Allow extra functions for Mutex based on the specified implementation (not portable) | off | N/A |
+
+## Running tests
+
+```sh
+beaver test
+``

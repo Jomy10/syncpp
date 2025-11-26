@@ -121,5 +121,5 @@ end
 cmd "test" do
   project("syncpp")
     .target("test")
-    .run([])
+    .run(["--reporter=spec"])
 end

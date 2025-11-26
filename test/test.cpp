@@ -148,6 +148,24 @@ go_bandit([]() {
       AssertThat(o.get().has_value(), Is().EqualTo(true));
       AssertThat(o.get().value(), Is().EqualTo(1));
     });
+
+    it("get_or_init", []() {
+      sync::Once<int> o = sync::Once<int>();
+
+      std::function<int(int)> fn = [](int n) {
+        return n;
+      };
+
+      AssertThat(o.get(), Is().EqualTo(std::nullopt));
+
+      auto v = o.get_or_init(fn, 100);
+      AssertThat(v.has_value(), Is().EqualTo(true));
+      AssertThat(v.value(), Is().EqualTo(100));
+
+      auto v2 = o.get_or_init(fn, 10);
+      AssertThat(v2.has_value(), Is().EqualTo(true));
+      AssertThat(v2.value(), Is().EqualTo(100));
+    });
   });
 });
 

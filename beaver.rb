@@ -8,25 +8,36 @@ with_test = !flag("no-test", default: false)
 
 pre "build" do
   if with_test
+    clone_github = !flag("test-curl", default: false)
+
     Dir.mkdir "deps" unless Dir.exist? "deps"
 
-    # GitHub is down
     unless Dir.exist? "deps/bandit"
-      sh "curl -L https://github.com/banditcpp/bandit/archive/refs/heads/main.zip -o deps/main.zip"
-      sh "unzip deps/main.zip -d deps"
-      sh "mv deps/bandit-main deps/bandit"
-      File.delete "deps/main.zip"
+      if clone_github
+        sh "git clone --recursive git@github.com:banditcpp/bandit.git deps/bandit"
+      else
+        # GitHub is down
+        sh "curl -L https://github.com/banditcpp/bandit/archive/refs/heads/main.zip -o deps/main.zip"
+        sh "unzip deps/main.zip -d deps"
+        sh "mv deps/bandit-main deps/bandit"
+        File.delete "deps/main.zip"
 
-      sh "curl -L https://github.com/banditcpp/snowhouse/archive/89ac7cd0baf2c411671a3169b9364acb1e5cddfd.zip -o deps/snowhouse.zip"
-      sh "unzip deps/snowhouse.zip -d deps/bandit/bandit/assertion_frameworks/"
-      sh "rm -r deps/bandit/bandit/assertion_frameworks/snowhouse"
-      sh "mv deps/bandit/bandit/assertion_frameworks/snowhouse* deps/bandit/bandit/assertion_frameworks/snowhouse"
-      File.delete "deps/snowhouse.zip"
+        sh "curl -L https://github.com/banditcpp/snowhouse/archive/89ac7cd0baf2c411671a3169b9364acb1e5cddfd.zip -o deps/snowhouse.zip"
+        sh "unzip deps/snowhouse.zip -d deps/bandit/bandit/assertion_frameworks/"
+        sh "rm -r deps/bandit/bandit/assertion_frameworks/snowhouse"
+        sh "mv deps/bandit/bandit/assertion_frameworks/snowhouse* deps/bandit/bandit/assertion_frameworks/snowhouse"
+        File.delete "deps/snowhouse.zip"
+      end
     end
-
-    # sh "git clone --recursive git@github.com:banditcpp/bandit.git deps/bandit"
   end
 end
+
+###########
+# Options #
+###########
+
+# RwLock Options #
+#================#
 
 # RwLock implemented with C++17 shared mutex. This does not allow for multiple read locks on the same thread
 rwlock_is_shared_mutex = flag("rwlock-is-shared-mutex", default: false)
@@ -38,25 +49,48 @@ throw "Shared mutex requires c++ >= 17" if rwlock_is_shared_mutex && cpp_version
 # RwLock implemented with pthread
 rwlock_is_pthread = flag("rwlock-is-pthread", default: TARGET.posix?)
 
+rwlock_ext = flag("rwlock-extension", default: false)
+
+# Mutex Options #
+#===============#
+
+mutex_is_pthread = flag("mutex-is-pthread", default: TARGET.posix? && cpp_version < 11)
+
+mutex_ext = flag("mutex-extension", default: false)
+
+#############
+# Set flags #
+#############
+
 lflags = [
-  rwlock_is_pthread ? "-lpthread" : nil
+  (rwlock_is_pthread || mutex_is_pthread) ? "-lpthread" : nil
 ].reject { |v| v.nil? }
 
 defines = [
   rwlock_is_shared_mutex ? "-DSYNC_RWLOCK_IS_SHARED_MUTEX" : nil,
   rwlock_is_pthread ? "-DSYNC_RWLOCK_IS_PTHREAD" : nil,
   # Allow extensions for RwLock that are not compliant with other implementations
-  flag("rwlock-extension", default: false) ? "-DSYNC_RWLOCK_EXTENSION" : nil,
-  # RwLock is implemented using pthread
+  rwlock_ext ? "-DSYNC_RWLOCK_EXTENSION" : nil,
+  mutex_is_pthread ? "-DSYNC_MUTEX_IS_PTHREAD" : nil,
+  mutex_ext ? "-DSYNC_MUTEX_EXTENSION" : nil,
 ].reject { |v| v.nil? }
+
+######################
+# CPP Version checks #
+######################
 
 if cpp_version >= 11
   defines << "-DSYNC_HAVE_SYSTEM_ERROR"
+  defines << "-DSYNC_HAVE_MUTEX"
 end
 
 if cpp_version >= 17
   defines << "-DSYNC_HAVE_OPTIONAL"
 end
+
+##################
+# Lib definition #
+##################
 
 C::Library(
   name: "sync",
@@ -84,9 +118,8 @@ if with_test
   )
 end
 
-
 cmd "test" do
-  project("sync++")
+  project("syncpp")
     .target("test")
     .run([])
 end

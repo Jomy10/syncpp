@@ -1,28 +1,49 @@
 #pragma once
 
-#if __cplusplus >= 201112L
+#if defined(SYNC_HAVE_MUTEX) || defined(SYNC_MUTEX_IS_PTHREAD)
+
+#include <memory>
 
 #include <sync/_internal/guard.hpp>
+#include <sync/_internal/non_copyable.hpp>
+#include <sync/_internal/syserr.hpp>
 
-#include <mutex>
-#if __cplusplus >= 201703L
-#include <optional>
+#if defined(SYNC_HAVE_MUTEX) && !defined(SYNC_MUTEX_IS_PTHREAD)
+  #include <mutex>
+#endif
+
+#if defined(SYNC_MUTEX_IS_PTHREAD)
+  #include <pthread.h>
 #endif
 
 namespace sync {
+
+#if defined(SYNC_HAVE_MUTEX) && !defined(SYNC_MUTEX_IS_PTHREAD)
+  namespace internal {
+    typedef std::mutex mutex_t;
+    typedef mutex_t& mutex_ref_t;
+  }
+#endif
+
+#if defined(SYNC_MUTEX_IS_PTHREAD)
+  namespace internal {
+    typedef pthread_mutex_t mutex_t;
+    typedef mutex_t* mutex_ref_t;
+  }
+#endif
 
 template<class T>
 class Mutex;
 
 template<class T>
-class MutexGuard {
+class MutexGuard: public internal::NonCopyable {
   friend class Mutex<T>;
 
   private:
   T& val;
-  std::mutex& m;
+  internal::mutex_ref_t m;
 
-  MutexGuard(T& val, std::mutex& m)
+  MutexGuard(T& val, internal::mutex_ref_t m)
     : val(val),
       m(m) {}
 
@@ -30,7 +51,12 @@ class MutexGuard {
   GUARD_FNS
 
   ~MutexGuard() {
-    m.unlock();
+    #if defined(SYNC_MUTEX_IS_PTHREAD)
+      int ret = pthread_mutex_unlock(this->m);
+      if (ret != 0) internal::throw_syserr(ret);
+    #else
+      this->m.unlock();
+    #endif
   }
 };
 
@@ -38,27 +64,64 @@ template<class T>
 class Mutex {
   private:
   T val;
-  std::mutex m;
+  internal::mutex_t m;
 
   public:
-  Mutex(T v) : val(v) {}
+  Mutex(T v) : val(v) {
+    #if defined(SYNC_MUTEX_IS_PTHREAD)
+    int ret = pthread_mutex_init(&this->m, NULL);
+    if (ret != 0) internal::throw_syserr(ret);
+    #endif
+  }
+
+  ~Mutex() {
+    #if defined(SYNC_MUTEX_IS_PTHREAD)
+    int ret = pthread_mutex_destroy(&this->m);
+    if (ret != 0) internal::throw_syserr(ret);
+    #endif
+  }
 
   MutexGuard<T> acquire() {
-    this->m.lock();
-    return MutexGuard<T>(this->val, this->m);
+    #if defined(SYNC_MUTEX_IS_PTHREAD)
+      int ret = pthread_mutex_lock(&this->m);
+      if (ret != 0) internal::throw_syserr(ret);
+      return MutexGuard<T>(this->val, &this->m);
+    #else
+      this->m.lock();
+      return MutexGuard<T>(this->val, this->m);
+    #endif
   }
 
-  #if __cplusplus >= 201703L
-  std::optional<MutexGuard<T>> try_acquire() {
-    if (this->m.try_lock()) {
-      return MutexGuard<T>(this->val, this->m);
-    } else {
-      return std::nullopt;
-    }
+  std::unique_ptr<MutexGuard<T>> try_acquire() {
+    #if defined(SYNC_MUTEX_IS_PTHREAD)
+      if (pthread_mutex_trylock(&this->m) == 0) {
+        return std::unique_ptr<MutexGuard<T>>(new MutexGuard<T>(this->val, &this->m));
+      } else {
+        return nullptr;
+      }
+    #else
+      if (this->m.try_lock()) {
+        return std::unique_ptr<MutexGuard<T>>(new MutexGuard<T>(this->val, this->m));
+      } else {
+        return nullptr;
+      }
+    #endif
   }
+
+  #if defined(SYNC_MUTEX_EXTENSION)
+    #if defined(SYNC_MUTEX_IS_PTHREAD)
+      std::unique_ptr<MutexGuard<T>> try_acquire(int* return_code) {
+        *return_code = pthread_mutex_trylock(&this->m);
+        if (*return_code == 0) {
+          return std::unique_ptr<MutexGuard<T>>(new MutexGuard<T>(this->val, &this->m));
+        } else {
+          return nullptr;
+        }
+      }
+    #endif
   #endif
 };
 
 } // namespace
 
-#endif // c++ 11 version check
+#endif // SYNC_HAVE_MUTEX

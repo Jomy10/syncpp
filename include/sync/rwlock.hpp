@@ -60,7 +60,8 @@ class RwLockReadGuard: public internal::NonCopyable {
   }
   #elif defined(SYNC_RWLOCK_IS_PTHREAD)
   ~RwLockReadGuard() {
-    pthread_rwlock_unlock(m);
+    int ret = pthread_rwlock_unlock(m);
+    if (ret != 0) internal::throw_syserr(ret);
   }
   #else
 
@@ -88,7 +89,8 @@ class RwLockWriteGuard: public internal::NonCopyable {
   }
   #elif defined(SYNC_RWLOCK_IS_PTHREAD)
   ~RwLockWriteGuard() {
-    pthread_rwlock_unlock(m);
+    int ret = pthread_rwlock_unlock(m);
+    if (ret != 0) internal::throw_syserr(ret);
   }
   #else
 
@@ -104,7 +106,15 @@ class RwLock {
   public:
   RwLock(T val) : val(val) {
     #if defined(SYNC_RWLOCK_IS_PTHREAD)
-    pthread_rwlock_init(&this->m, NULL);
+    int ret = pthread_rwlock_init(&this->m, NULL);
+    if (ret != 0) internal::throw_syserr(ret);
+    #endif
+  }
+
+  ~RwLock() {
+    #if defined(SYNC_RWLOCK_IS_PTHREAD)
+    int ret = pthread_rwlock_destroy(&this->m);
+    if (ret != 0) internal::throw_syserr(ret);
     #endif
   }
 
@@ -139,7 +149,7 @@ class RwLock {
       if (this->m.try_lock_shared()) {
         return std::unique_ptr<RwLockReadGuard<T>>(new RwLockReadGuard<T>(this->val, this->m));
       } else {
-        return std::nullopt;
+        return nullptr;
       }
     #elif defined(SYNC_RWLOCK_IS_PTHREAD)
       int ret = pthread_rwlock_tryrdlock(&this->m);
@@ -155,7 +165,7 @@ class RwLock {
       if (this->m.try_lock()) {
         return std::unique_ptr<RwLockWriteGuard<T>>(new RwLockWriteGuard<T>(this->val, this->m));
       } else {
-        return std::nullopt;
+        return nullptr;
       }
     #elif defined(SYNC_RWLOCK_IS_PTHREAD)
       int ret = pthread_rwlock_trywrlock(&this->m);
@@ -172,7 +182,7 @@ class RwLock {
         int ret = pthread_rwlock_tryrdlock(&this->m);
         if (ret != 0) {
           *return_code = ret;
-          return std::nullopt;
+          return nullptr;
         }
 
         return std::unique_ptr<RwLockReadGuard<T>>(new RwLockReadGuard<T>(this->val, &this->m));
@@ -181,7 +191,7 @@ class RwLock {
       std::unique_ptr<RwLockWriteGuard<T>> try_write(int* return_code) {
         int ret = pthread_rwlock_trywrlock(&this->m);
         if (ret != 0) {
-          return std::nullopt;
+          return nullptr;
         }
 
         return std::unique_ptr<RwLockWriteGuard<T>>(new RwLockWriteGuard<T>(this->val, &this->m));

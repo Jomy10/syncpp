@@ -14,7 +14,7 @@ go_bandit([]() {
 
       auto guard = m.acquire();
 
-      AssertThat(m.try_acquire(), Is().EqualTo(std::nullopt));
+      AssertThat(m.try_acquire(), Is().EqualTo(nullptr));
 
       AssertThat((int)guard, Is().EqualTo(1));
 
@@ -25,9 +25,9 @@ go_bandit([]() {
       guard.~MutexGuard<int>();
 
       auto guard2 = m.try_acquire();
-      AssertThat(guard2.has_value(), Is().EqualTo(true));
+      AssertThat(guard2 != nullptr, Is().EqualTo(true));
 
-      AssertThat((int)guard2.value(), Is().EqualTo(2));
+      AssertThat((int)guard2->value(), Is().EqualTo(2));
     });
   });
 

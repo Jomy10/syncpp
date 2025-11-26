@@ -44,5 +44,17 @@ auto wrguard = m.write(); // error
 This project uses the [beaver build system](https://github.com/Jomy10/beaver).
 
 ```sh
-beaver
+beaver -- --no-test
 ```
+
+### Building options
+
+Options can be specified after `beaver --`. For example: `beaver -- --no-test --rwlock-is-pthread`.
+
+| Option | Description | On if |
+|--------|-------------|-------|
+| `rwlock-is-pthread` | RwLock implemented using `pthread_rwlock_t` | Target OS is posix |
+| `rwlock-is-shared-mutex` | RwLock implemented using `std::shared_mutex` (currently not fully implemented) | specified |
+| `rwlock-extension` | Allow extra functions for RwLock based on the specified implementation (not portable) | specified |
+| `mutex_is_pthread` | Mutex implemented using `pthread_mutex_t` (default: `std::mutex`). | C++ version < 11 and Target OS is posix |
+| `mutex-extension` | Allow extra functions for Mutex based on the specified implementation (not portable) | specified |
